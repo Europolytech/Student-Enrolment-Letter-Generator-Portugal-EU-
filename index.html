@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EuroPolytech Student Enrolment Letter Generator</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    :root{
+      --primary:#003366;
+      --accent:#0f4c81;
+      --bg:#f4f7f9;
+      --card:#ffffff;
+      --muted:#6b7280;
+      --border:#d9e2ec;
+      --soft:#f8fafc;
+      --success:#198754;
+      --danger:#b42318;
+      --warning:#b54708;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      background:var(--bg);
+      color:#111827;
+      font-family:Arial, Helvetica, sans-serif;
+      padding:20px;
+    }
+    .wrap{
+      max-width:1200px;
+      margin:0 auto;
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:16px;
+      box-shadow:0 10px 30px rgba(16,24,40,.08);
+      overflow:hidden;
+    }
+    .topbar{
+      background:linear-gradient(135deg, var(--primary), var(--accent));
+      color:#fff;
+      padding:22px 26px;
+    }
+    .topbar h1{margin:0 0 6px;font-size:24px}
+    .topbar p{margin:0;font-size:13px;opacity:.95}
+    .content{padding:22px}
+    .toolbar, .btn-grid{
+      display:grid;
+      grid-template-columns:repeat(4, 1fr);
+      gap:12px;
+      margin-bottom:16px;
+    }
+    .btn-grid{grid-template-columns:repeat(5, 1fr)}
+    .btn{
+      border:none;
+      border-radius:12px;
+      padding:13px 14px;
+      font-weight:700;
+      cursor:pointer;
+      font-size:14px;
+      transition:.15s ease;
+    }
+    .btn:hover{transform:translateY(-1px)}
+    .btn-primary{background:var(--primary);color:#fff}
+    .btn-success{background:var(--success);color:#fff}
+    .btn-soft{background:#eef4fb;color:var(--primary);border:1px solid #c9d8ea}
+    .btn-warning{background:#fff7ed;color:#9a3412;border:1px solid #fed7aa}
+    .btn-danger{background:#fef3f2;color:var(--danger);border:1px solid #fecdca}
+
+    .notice{
+      background:#fff8e6;
+      border:1px solid #f5d58b;
+      color:#7a5600;
+      border-radius:12px;
+      padding:12px 14px;
+      font-size:13px;
+      margin-bottom:18px;
+    }
+    .status{
+      display:none;
+      margin-bottom:16px;
+      padding:12px 14px;
+      border-radius:12px;
+      font-size:13px;
+      white-space:pre-line;
+    }
+    .status.ok{display:block;background:#ecfdf3;border:1px solid #abefc6;color:#067647}
+    .status.bad{display:block;background:#fef3f2;border:1px solid #fecdca;color:#b42318}
+
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(12,1fr);
+      gap:14px;
+    }
+    .section{
+      background:var(--soft);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:16px;
+      margin-bottom:16px;
+    }
+    .section h2{
+      margin:0 0 12px;
+      font-size:13px;
+      letter-spacing:.4px;
+      color:var(--primary);
+      text-transform:uppercase;
+    }
+    .field{display:flex;flex-direction:column;gap:6px}
+    .field label{font-size:11px;font-weight:800;color:#344054;text-transform:uppercase}
+    .field input, .field select, .field textarea{
+      width:100%;
+      border:1px solid #cfd8e3;
+      border-radius:10px;
+      padding:10px 11px;
+      font-size:13px;
+      background:#fff;
+      font-family:inherit;
+    }
+    .field textarea{min-height:100px;resize:vertical}
+    .hint{font-size:11px;color:var(--muted);line-height:1.35}
+    .c12{grid-column:span 12}.c9{grid-column:span 9}.c8{grid-column:span 8}.c6{grid-column:span 6}.c4{grid-column:span 4}.c3{grid-column:span 3}
+
+    #previewWrap{display:none;margin-top:8px}
+    #letter-output{background:#dde6ef;padding:18px;border-radius:16px}
+    .letter-page{
+      width:210mm;
+      min-height:297mm;
+      background:#fff;
+      margin:0 auto 16px;
+      padding:15mm 18mm;
+      color:#000;
+      font-family:"Times New Roman", Times, serif;
+      font-size:11.2pt;
+      line-height:1.42;
+      box-shadow:0 6px 28px rgba(15,23,42,.12);
+      page-break-after:always;
+    }
+    .letter-header{
+      display:grid;
+      grid-template-columns:62px 1fr 1fr;
+      gap:12px;
+      align-items:center;
+      border-bottom:2px solid var(--primary);
+      padding-bottom:8px;
+      margin-bottom:12px;
+    }
+    .logo-box img{width:58px;height:58px;object-fit:contain;display:block}
+    .inst-name{font-size:18px;font-weight:900;color:var(--primary);line-height:1.08}
+    .inst-info{font-size:8.8pt;color:var(--primary);line-height:1.2;text-align:right}
+    .ref-row{display:flex;justify-content:space-between;font-size:11pt;font-weight:700;margin:8px 0 12px}
+    .centered-title{text-align:center;font-size:14pt;font-weight:900;text-transform:uppercase;text-decoration:underline;margin:8px 0 14px;letter-spacing:.3px}
+    .section-title{display:block;margin:11px 0 5px;font-weight:900;text-decoration:underline}
+    .footer-sign{
+      margin-top:28px;
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-end;
+      gap:18px;
+    }
+    .stamp{
+      width:120px;height:120px;border:1px dashed #999;color:#888;
+      display:flex;align-items:center;justify-content:center;text-align:center;font-size:8.5pt;padding:8px;
+    }
+    .small{font-size:9.5pt}
+
+    @media (max-width: 960px){
+      .toolbar,.btn-grid{grid-template-columns:1fr 1fr}
+      .c3,.c4{grid-column:span 6}
+      .c6,.c8,.c9{grid-column:span 12}
+      .letter-page{width:100%;min-height:auto;padding:20px}
+    }
+    @media (max-width: 640px){
+      body{padding:10px}
+      .content{padding:14px}
+      .toolbar,.btn-grid{grid-template-columns:1fr}
+      .c3,.c4,.c6,.c8,.c9{grid-column:span 12}
+    }
+    @media print{
+      body{background:#fff;padding:0}
+      .wrap{box-shadow:none;border:none}
+      .topbar,.content > :not(#previewWrap), .notice {display:none !important}
+      #previewWrap{display:block !important}
+      #letter-output{background:#fff;padding:0}
+      .letter-page{box-shadow:none;margin:0;width:100%;min-height:auto;padding:15mm 18mm}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <h1>EuroPolytech Student Enrolment Letter Generator</h1>
+      <p>Bilingual enrolment declaration generator with print-to-PDF, download PDF, email draft, local save, and import/export tools.</p>
+    </div>
+
+    <div class="content">
+      <div class="notice">
+        The widget can generate the PDF and open a pre-written email draft, but standard browser security does not allow a normal HTML page to auto-attach a PDF directly into the user’s email window. This version gives a one-click draft plus PDF download workflow.
+      </div>
+
+      <div id="status" class="status"></div>
+
+      <div class="toolbar">
+        <button class="btn btn-primary" onclick="generatePreview()">Generate Preview</button>
+        <button class="btn btn-success" onclick="window.print()">Print / Save as PDF</button>
+        <button class="btn btn-soft" onclick="downloadPDF()">Download PDF</button>
+        <button class="btn btn-warning" onclick="openEmailDraft()">Open Email Draft</button>
+      </div>
+
+      <div class="btn-grid">
+        <button class="btn btn-soft" onclick="saveCurrentRecord()">Save Student Data</button>
+        <button class="btn btn-soft" onclick="loadSavedRecord()">Load Saved Data</button>
+        <button class="btn btn-soft" onclick="exportJSON()">Export JSON</button>
+        <button class="btn btn-soft" onclick="document.getElementById('jsonFile').click()">Import JSON</button>
+        <button class="btn btn-danger" onclick="clearForm()">Clear Form</button>
+      </div>
+      <input type="file" id="jsonFile" accept="application/json" style="display:none" onchange="importJSON(event)" />
+
+      <div class="section">
+        <h2>0. Institution and Issuer</h2>
+        <div class="grid">
+          <div class="field c6"><label>Institution Legal Name</label><input id="instLegal" value="EUROPOLYTECH ACADEMY, UNIPESSOAL LDA"></div>
+          <div class="field c6"><label>Brand Name</label><input id="instBrand" value="EUROPOLYTECH ACADEMY"></div>
+          <div class="field c8"><label>Registered Address</label><input id="instAddress" value="R. Covas de Cima, 159 B, Guimarães, Portugal"></div>
+          <div class="field c4"><label>Delivery Site</label><input id="deliverySite" value="Rua Camilo Castelo Branco 79, 4425-037 Águas Santas, Porto, Portugal"></div>
+          <div class="field c4"><label>Telephone</label><input id="instPhone" value="+351 220 187 748"></div>
+          <div class="field c4"><label>Admissions Email</label><input id="instEmail" value="admissions@europolytech.academy"></div>
+          <div class="field c4"><label>Verification Contact</label><input id="verifPerson" value="Admissions Office"></div>
+          <div class="field c4"><label>Verification Email</label><input id="verifEmail" value="admissions@europolytech.academy"></div>
+          <div class="field c4"><label>Centre Number / Approval Ref.</label><input id="centreNumber" value="DC2512971"></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>1. Student and Letter Details</h2>
+        <div class="grid">
+          <div class="field c3"><label>Letter Date</label><input type="date" id="letterDate"></div>
+          <div class="field c3"><label>Reference Number</label><input id="ref" placeholder="e.g. EPA-ENR-2026-0001"></div>
+          <div class="field c3"><label>First Name</label><input id="firstName"></div>
+          <div class="field c3"><label>Last Name</label><input id="lastName"></div>
+          <div class="field c3"><label>Nationality</label><input id="nationality"></div>
+          <div class="field c3"><label>Date of Birth</label><input type="date" id="dob"></div>
+          <div class="field c3"><label>Passport / ID Number</label><input id="idNumber"></div>
+          <div class="field c3"><label>Student Number</label><input id="studentNumber" placeholder="Optional if not yet assigned"></div>
+          <div class="field c6"><label>Student Email</label><input id="studentEmail" type="email"></div>
+          <div class="field c6"><label>Student Address</label><input id="studentAddress"></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>2. Enrolment and Programme Information</h2>
+        <div class="grid">
+          <div class="field c8"><label>Programme Title</label><input id="programmeTitle" value="OTHM Level 3 Foundation Diploma in Engineering"></div>
+          <div class="field c4"><label>Programme Level</label><input id="programmeLevel" value="Level 3"></div>
+          <div class="field c4"><label>Awarding Body</label><input id="awardingBody" value="OTHM (UK Ofqual-regulated awarding organisation)"></div>
+          <div class="field c4"><label>Mode of Study</label>
+            <select id="modeStudy">
+              <option>On-site (In-person)</option>
+              <option>Blended</option>
+              <option>Online</option>
+            </select>
+          </div>
+          <div class="field c4"><label>Programme Language</label>
+            <select id="programmeLanguage">
+              <option>English</option>
+              <option>Portuguese</option>
+              <option>English & Portuguese</option>
+            </select>
+          </div>
+          <div class="field c3"><label>Start Date</label><input type="date" id="startDate" onchange="calcDuration()"></div>
+          <div class="field c3"><label>End Date</label><input type="date" id="endDate" onchange="calcDuration()"></div>
+          <div class="field c3"><label>Total Days</label><input id="totalDays" readonly></div>
+          <div class="field c3"><label>Weekly Contact Hours</label><input id="contactHours" value="20 hours per week"></div>
+          <div class="field c4"><label>Academic Year / Intake</label><input id="intake" value="May–July 2026 Intake"></div>
+          <div class="field c4"><label>Enrolment Status</label>
+            <select id="enrolmentStatus">
+              <option>Admitted and provisionally enrolled</option>
+              <option>Admitted and fully enrolled</option>
+              <option>Conditionally enrolled</option>
+            </select>
+          </div>
+          <div class="field c4"><label>Type of Letter</label>
+            <select id="letterType">
+              <option>Student Enrolment Letter</option>
+              <option>Enrolment Declaration</option>
+              <option>Admission and Enrolment Confirmation</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>3. Fees, Payment and Conditions</h2>
+        <div class="grid">
+          <div class="field c3"><label>Total Tuition Fee (€)</label><input id="tuitionFee" type="number" value="3500"></div>
+          <div class="field c3"><label>Registration Fee (€)</label><input id="registrationFee" type="number" value="30"></div>
+          <div class="field c3"><label>Amount Paid (€)</label><input id="amountPaid" type="number" value="0"></div>
+          <div class="field c3"><label>Payment Status</label>
+            <select id="paymentStatus">
+              <option>Paid in full</option>
+              <option>Partially paid</option>
+              <option>Pending payment</option>
+            </select>
+          </div>
+          <div class="field c6"><label>Fee Scope</label><input id="feeScope" value="Tuition and academic supervision only, unless otherwise stated."></div>
+          <div class="field c6"><label>Outstanding Conditions</label><input id="outstandingConditions" value="Submission of identification document, qualification evidence, and any remaining fees."></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>4. Institutional Text Blocks</h2>
+        <div class="grid">
+          <div class="field c6">
+            <label>English Core Declaration</label>
+            <textarea id="coreEN">This is to certify, for all due purposes, that the above-named student has been admitted and is enrolled in the programme stated in this letter at EuroPolytech Academy for the academic period indicated below.</textarea>
+          </div>
+          <div class="field c6">
+            <label>Portuguese Core Declaration</label>
+            <textarea id="corePT">Declara-se, para os devidos efeitos, que o estudante acima identificado foi admitido e se encontra inscrito no programa indicado nesta carta na EuroPolytech Academy, para o período académico abaixo referido.</textarea>
+          </div>
+          <div class="field c6">
+            <label>English Conditions / Remarks</label>
+            <textarea id="remarksEN">This enrolment is subject to completion of all administrative and academic formalities required by the institution. Admission or provisional enrolment does not by itself confer any immigration status, residence right, or employment right. Any official progression, registration with the awarding body, or final certification remains subject to the institution’s and awarding body’s rules.</textarea>
+          </div>
+          <div class="field c6">
+            <label>Portuguese Conditions / Remarks</label>
+            <textarea id="remarksPT">A presente inscrição está sujeita à conclusão de todas as formalidades administrativas e académicas exigidas pela instituição. A admissão ou inscrição provisória, por si só, não confere qualquer estatuto migratório, direito de residência ou direito ao trabalho. Qualquer progressão oficial, registo junto da entidade certificadora ou certificação final permanece sujeita às regras da instituição e da entidade certificadora.</textarea>
+          </div>
+          <div class="field c6">
+            <label>English Calendar / Duration Block</label>
+            <textarea id="calendarEN">The programme is delivered within the dates stated in this letter. The academic schedule may include lectures, tutorials, workshops, guided study, independent learning, assessments, and institutional breaks, as applicable.</textarea>
+          </div>
+          <div class="field c6">
+            <label>Portuguese Calendar / Duration Block</label>
+            <textarea id="calendarPT">O programa decorre dentro das datas indicadas nesta carta. O calendário académico pode incluir aulas, tutorias, workshops, estudo orientado, aprendizagem autónoma, avaliações e interrupções letivas institucionais, quando aplicável.</textarea>
+          </div>
+        </div>
+      </div>
+
+      <div id="previewWrap">
+        <div id="letter-output"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const LOGO_URL = 'https://www.europolytech.academy/EuroPolytech%20Logo%20jpeg.png';
+const STORAGE_KEY = 'europolytech_enrolment_letter_record';
+
+(function init(){
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('letterDate').value = today;
+  calcDuration();
+  autoReference();
+  ['letterDate','firstName','lastName'].forEach(id=>document.getElementById(id).addEventListener('change', autoReference));
+})();
+
+function $(id){ return document.getElementById(id); }
+function showStatus(kind, msg){
+  const el = $('status');
+  el.className = 'status ' + (kind === 'bad' ? 'bad' : 'ok');
+  el.textContent = msg;
+}
+function escapeHTML(str){
+  return String(str || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function nl2br(str){ return escapeHTML(str).replace(/\n/g,'<br>'); }
+function formatDateEN(iso){ return iso ? new Date(iso+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit', month:'long', year:'numeric'}) : '—'; }
+function formatDatePT(iso){ return iso ? new Date(iso+'T00:00:00').toLocaleDateString('pt-PT') : '—'; }
+function daysBetween(s,e){ if(!s || !e) return ''; const a=new Date(s), b=new Date(e); const diff=Math.ceil((b-a)/(1000*60*60*24)); return diff > 0 ? diff : ''; }
+function calcDuration(){ $('totalDays').value = daysBetween($('startDate').value,$('endDate').value) || ''; }
+function autoReference(){
+  if($('ref').dataset.manual === '1') return;
+  const year = ($('letterDate').value || new Date().toISOString().slice(0,10)).slice(0,4);
+  const initials = (($('firstName').value||'S').charAt(0)+($('lastName').value||'T').charAt(0)).toUpperCase();
+  $('ref').value = `EPA-ENR-${year}-${initials}-${Math.floor(1000+Math.random()*9000)}`;
+}
+$('ref').addEventListener('input', ()=> $('ref').dataset.manual = '1');
+
+function collectData(){
+  calcDuration();
+  return {
+    instLegal:$('instLegal').value, instBrand:$('instBrand').value, instAddress:$('instAddress').value,
+    deliverySite:$('deliverySite').value, instPhone:$('instPhone').value, instEmail:$('instEmail').value,
+    verifPerson:$('verifPerson').value, verifEmail:$('verifEmail').value, centreNumber:$('centreNumber').value,
+    letterDate:$('letterDate').value, ref:$('ref').value,
+    firstName:$('firstName').value, lastName:$('lastName').value, nationality:$('nationality').value,
+    dob:$('dob').value, idNumber:$('idNumber').value, studentNumber:$('studentNumber').value,
+    studentEmail:$('studentEmail').value, studentAddress:$('studentAddress').value,
+    programmeTitle:$('programmeTitle').value, programmeLevel:$('programmeLevel').value, awardingBody:$('awardingBody').value,
+    modeStudy:$('modeStudy').value, programmeLanguage:$('programmeLanguage').value,
+    startDate:$('startDate').value, endDate:$('endDate').value, totalDays:$('totalDays').value,
+    contactHours:$('contactHours').value, intake:$('intake').value, enrolmentStatus:$('enrolmentStatus').value,
+    letterType:$('letterType').value, tuitionFee:$('tuitionFee').value, registrationFee:$('registrationFee').value,
+    amountPaid:$('amountPaid').value, paymentStatus:$('paymentStatus').value, feeScope:$('feeScope').value,
+    outstandingConditions:$('outstandingConditions').value,
+    coreEN:$('coreEN').value, corePT:$('corePT').value, remarksEN:$('remarksEN').value,
+    remarksPT:$('remarksPT').value, calendarEN:$('calendarEN').value, calendarPT:$('calendarPT').value
+  };
+}
+
+function validate(d){
+  const issues=[];
+  if(!d.firstName || !d.lastName) issues.push('Student first name and last name are required.');
+  if(!d.studentEmail) issues.push('Student email is required for the email draft.');
+  if(!d.programmeTitle) issues.push('Programme title is required.');
+  if(!d.letterDate) issues.push('Letter date is required.');
+  if(!d.ref) issues.push('Reference number is required.');
+  if(!d.startDate || !d.endDate) issues.push('Programme start and end dates are required.');
+  if(!d.totalDays) issues.push('End date must be after start date.');
+  return issues;
+}
+
+function renderHeader(d){
+  return `<div class="letter-header">
+    <div class="logo-box"><img src="${LOGO_URL}" alt="EuroPolytech logo"></div>
+    <div class="inst-name">${escapeHTML(d.instBrand)}</div>
+    <div class="inst-info">${escapeHTML(d.instLegal)}<br>${escapeHTML(d.instAddress)}<br>Tel: ${escapeHTML(d.instPhone)} | ${escapeHTML(d.instEmail)}</div>
+  </div>`;
+}
+
+function renderEN(d){
+  return `<div class="letter-page">
+    ${renderHeader(d)}
+    <div class="ref-row"><span>Date: ${escapeHTML(formatDateEN(d.letterDate))}</span><span>Reference: ${escapeHTML(d.ref)}</span></div>
+    <div class="centered-title">${escapeHTML(d.letterType)}</div>
+
+    <p>${nl2br(d.coreEN)}</p>
+
+    <span class="section-title">1. Student Identification</span>
+    Full Name: <b>${escapeHTML(d.firstName)} ${escapeHTML(d.lastName)}</b><br>
+    Nationality: ${escapeHTML(d.nationality || '—')}<br>
+    Date of Birth: ${escapeHTML(formatDateEN(d.dob))}<br>
+    Passport / ID Number: ${escapeHTML(d.idNumber || '—')}<br>
+    Student Number: ${escapeHTML(d.studentNumber || 'Not yet assigned')}<br>
+    Student Address: ${escapeHTML(d.studentAddress || '—')}<br>
+    Student Email: ${escapeHTML(d.studentEmail || '—')}
+
+    <span class="section-title">2. Programme and Enrolment Details</span>
+    Programme Title: <b>${escapeHTML(d.programmeTitle)}</b><br>
+    Programme Level: ${escapeHTML(d.programmeLevel)}<br>
+    Awarding Body: ${escapeHTML(d.awardingBody)}<br>
+    Academic Intake / Period: ${escapeHTML(d.intake)}<br>
+    Delivery Site: ${escapeHTML(d.deliverySite)}<br>
+    Mode of Study: ${escapeHTML(d.modeStudy)}<br>
+    Programme Language: ${escapeHTML(d.programmeLanguage)}<br>
+    Weekly Contact Hours: ${escapeHTML(d.contactHours || '—')}<br>
+    Start Date: ${escapeHTML(formatDateEN(d.startDate))}<br>
+    End Date: ${escapeHTML(formatDateEN(d.endDate))}<br>
+    Total Duration: ${escapeHTML(d.totalDays)} day(s)<br>
+    Enrolment Status: <b>${escapeHTML(d.enrolmentStatus)}</b>
+
+    <span class="section-title">3. Fees and Payment Position</span>
+    Total Tuition Fee: €${escapeHTML(d.tuitionFee || '0')}<br>
+    Registration Fee: €${escapeHTML(d.registrationFee || '0')}<br>
+    Amount Paid to Date: €${escapeHTML(d.amountPaid || '0')}<br>
+    Payment Status: ${escapeHTML(d.paymentStatus)}<br>
+    Fee Scope: ${escapeHTML(d.feeScope || '—')}
+
+    <span class="section-title">4. Administrative Conditions</span>
+    Outstanding conditions, where applicable: ${escapeHTML(d.outstandingConditions || 'None stated.')}<br><br>
+    ${nl2br(d.calendarEN)}<br><br>
+    ${nl2br(d.remarksEN)}
+
+    <span class="section-title">5. Institutional Confirmation</span>
+    This letter is issued by ${escapeHTML(d.instBrand)} as formal confirmation of the student’s admission and/or enrolment status for the programme specified above. It is issued for administrative, academic, and where applicable, supporting documentary purposes.
+
+    <div class="small" style="margin-top:14px"><b>Verification Contact:</b> ${escapeHTML(d.verifPerson)}<br>Email: ${escapeHTML(d.verifEmail)}${d.centreNumber ? `<br>Centre Number / Approval Reference: ${escapeHTML(d.centreNumber)}` : ''}</div>
+
+    <div class="footer-sign">
+      <div>Signed: ____________________<br><b>Admissions Office</b></div>
+      <div class="stamp">INSTITUTIONAL STAMP</div>
+    </div>
+  </div>`;
+}
+
+function renderPT(d){
+  return `<div class="letter-page">
+    ${renderHeader(d)}
+    <div class="ref-row"><span>Data: ${escapeHTML(formatDatePT(d.letterDate))}</span><span>Referência: ${escapeHTML(d.ref)}</span></div>
+    <div class="centered-title">Declaração de Inscrição do Estudante</div>
+
+    <p>${nl2br(d.corePT)}</p>
+
+    <span class="section-title">1. Identificação do Estudante</span>
+    Nome Completo: <b>${escapeHTML(d.firstName)} ${escapeHTML(d.lastName)}</b><br>
+    Nacionalidade: ${escapeHTML(d.nationality || '—')}<br>
+    Data de Nascimento: ${escapeHTML(formatDatePT(d.dob))}<br>
+    Número do Passaporte / Documento: ${escapeHTML(d.idNumber || '—')}<br>
+    Número de Estudante: ${escapeHTML(d.studentNumber || 'Ainda não atribuído')}<br>
+    Morada do Estudante: ${escapeHTML(d.studentAddress || '—')}<br>
+    Email do Estudante: ${escapeHTML(d.studentEmail || '—')}
+
+    <span class="section-title">2. Dados do Programa e da Inscrição</span>
+    Título do Programa: <b>${escapeHTML(d.programmeTitle)}</b><br>
+    Nível do Programa: ${escapeHTML(d.programmeLevel)}<br>
+    Entidade Certificadora: ${escapeHTML(d.awardingBody)}<br>
+    Intake / Período Académico: ${escapeHTML(d.intake)}<br>
+    Local de Realização: ${escapeHTML(d.deliverySite)}<br>
+    Regime de Estudos: ${escapeHTML(d.modeStudy)}<br>
+    Idioma do Programa: ${escapeHTML(d.programmeLanguage)}<br>
+    Carga Horária Semanal: ${escapeHTML(d.contactHours || '—')}<br>
+    Data de Início: ${escapeHTML(formatDatePT(d.startDate))}<br>
+    Data de Fim: ${escapeHTML(formatDatePT(d.endDate))}<br>
+    Duração Total: ${escapeHTML(d.totalDays)} dia(s)<br>
+    Estado da Inscrição: <b>${escapeHTML(d.enrolmentStatus)}</b>
+
+    <span class="section-title">3. Propinas e Situação de Pagamento</span>
+    Propina Total: €${escapeHTML(d.tuitionFee || '0')}<br>
+    Taxa de Inscrição: €${escapeHTML(d.registrationFee || '0')}<br>
+    Montante Pago Até à Data: €${escapeHTML(d.amountPaid || '0')}<br>
+    Estado do Pagamento: ${escapeHTML(d.paymentStatus)}<br>
+    Âmbito das Taxas: ${escapeHTML(d.feeScope || '—')}
+
+    <span class="section-title">4. Condições Administrativas</span>
+    Condições pendentes, quando aplicável: ${escapeHTML(d.outstandingConditions || 'Nenhuma indicada.')}<br><br>
+    ${nl2br(d.calendarPT)}<br><br>
+    ${nl2br(d.remarksPT)}
+
+    <span class="section-title">5. Confirmação Institucional</span>
+    A presente carta é emitida pela ${escapeHTML(d.instBrand)} como confirmação formal do estado de admissão e/ou inscrição do estudante no programa acima identificado. É emitida para efeitos administrativos, académicos e, quando aplicável, como documento de suporte.
+
+    <div class="small" style="margin-top:14px"><b>Contacto para Verificação:</b> ${escapeHTML(d.verifPerson)}<br>Email: ${escapeHTML(d.verifEmail)}${d.centreNumber ? `<br>Número do Centro / Referência de Aprovação: ${escapeHTML(d.centreNumber)}` : ''}</div>
+
+    <div class="footer-sign">
+      <div>Assinado: ____________________<br><b>Gabinete de Admissões</b></div>
+      <div class="stamp">CARIMBO INSTITUCIONAL</div>
+    </div>
+  </div>`;
+}
+
+function generatePreview(){
+  const d = collectData();
+  const issues = validate(d);
+  if(issues.length){ showStatus('bad', 'Please fix the following before generating the letter:\n- ' + issues.join('\n- ')); return; }
+  $('letter-output').innerHTML = renderEN(d) + renderPT(d);
+  $('previewWrap').style.display = 'block';
+  showStatus('ok', 'Preview generated successfully. You can now print, download the PDF, or open the email draft.');
+  window.scrollTo({top: document.body.scrollHeight, behavior:'smooth'});
+}
+
+async function downloadPDF(){
+  const d = collectData();
+  const issues = validate(d);
+  if(issues.length){ showStatus('bad', 'Please complete the required fields before downloading the PDF.'); return; }
+  if(!$('previewWrap').style.display || $('previewWrap').style.display === 'none') generatePreview();
+  showStatus('ok', 'Generating PDF...');
+  const { jsPDF } = window.jspdf;
+  const pages = document.querySelectorAll('.letter-page');
+  const pdf = new jsPDF('p','mm','a4');
+  for(let i=0;i<pages.length;i++){
+    const canvas = await html2canvas(pages[i], {scale:2, useCORS:true, backgroundColor:'#ffffff'});
+    const img = canvas.toDataURL('image/jpeg', 0.95);
+    const pdfW = 210, pdfH = 297;
+    if(i>0) pdf.addPage();
+    pdf.addImage(img, 'JPEG', 0, 0, pdfW, pdfH);
+  }
+  const filename = `${(d.firstName||'student')}_${(d.lastName||'record')}_${(d.ref||'letter')}.pdf`.replace(/\s+/g,'_');
+  pdf.save(filename);
+  showStatus('ok', 'PDF downloaded successfully.');
+}
+
+function openEmailDraft(){
+  const d = collectData();
+  const issues = validate(d);
+  if(issues.length){ showStatus('bad', 'Please complete the required fields before opening the email draft.'); return; }
+  const subject = `EuroPolytech Enrolment Letter - ${d.firstName} ${d.lastName} - ${d.ref}`;
+  const body = `Dear ${d.firstName} ${d.lastName},%0D%0A%0D%0APlease find attached your Student Enrolment Letter issued by EuroPolytech Academy for the programme ${d.programmeTitle}.%0D%0A%0D%0AReference: ${d.ref}%0D%0AProgramme period: ${formatDateEN(d.startDate)} to ${formatDateEN(d.endDate)}%0D%0AEnrolment status: ${d.enrolmentStatus}%0D%0A%0D%0AKind regards,%0D%0AAdmissions Office%0D%0AEuroPolytech Academy`;
+  const mailto = `mailto:${encodeURIComponent(d.studentEmail)}?subject=${encodeURIComponent(subject)}&body=${body}`;
+  window.location.href = mailto;
+  showStatus('ok', 'Email draft opened. Attach the downloaded PDF manually in your email client.');
+}
+
+function saveCurrentRecord(){
+  const d = collectData();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
+  showStatus('ok', 'Student data saved locally in this browser.');
+}
+
+function loadSavedRecord(){
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if(!raw){ showStatus('bad', 'No saved student data was found in this browser.'); return; }
+  applyData(JSON.parse(raw));
+  showStatus('ok', 'Saved student data loaded.');
+}
+
+function applyData(data){
+  Object.keys(data).forEach(key => { if($(key)) $(key).value = data[key]; });
+  calcDuration();
+}
+
+function exportJSON(){
+  const d = collectData();
+  const blob = new Blob([JSON.stringify(d, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${(d.firstName||'student')}_${(d.lastName||'record')}_enrolment.json`.replace(/\s+/g,'_');
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showStatus('ok', 'JSON file exported successfully.');
+}
+
+function importJSON(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try{
+      const data = JSON.parse(e.target.result);
+      applyData(data);
+      showStatus('ok', 'JSON file imported successfully.');
+    }catch(err){
+      showStatus('bad', 'The selected file is not a valid JSON record.');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function clearForm(){
+  document.querySelectorAll('input, textarea').forEach(el => {
+    if(el.type === 'date') el.value = '';
+    else if(el.id !== 'instLegal' && el.id !== 'instBrand' && el.id !== 'instAddress' && el.id !== 'deliverySite' && el.id !== 'instPhone' && el.id !== 'instEmail' && el.id !== 'verifPerson' && el.id !== 'verifEmail' && el.id !== 'centreNumber') el.value = '';
+  });
+  $('modeStudy').selectedIndex = 0;
+  $('programmeLanguage').selectedIndex = 0;
+  $('enrolmentStatus').selectedIndex = 0;
+  $('paymentStatus').selectedIndex = 0;
+  $('letterType').selectedIndex = 0;
+  $('letterDate').value = new Date().toISOString().slice(0,10);
+  $('programmeTitle').value = 'OTHM Level 3 Foundation Diploma in Engineering';
+  $('programmeLevel').value = 'Level 3';
+  $('awardingBody').value = 'OTHM (UK Ofqual-regulated awarding organisation)';
+  $('contactHours').value = '20 hours per week';
+  $('intake').value = 'May–July 2026 Intake';
+  $('tuitionFee').value = '3500';
+  $('registrationFee').value = '30';
+  $('amountPaid').value = '0';
+  $('feeScope').value = 'Tuition and academic supervision only, unless otherwise stated.';
+  $('outstandingConditions').value = 'Submission of identification document, qualification evidence, and any remaining fees.';
+  $('coreEN').value = 'This is to certify, for all due purposes, that the above-named student has been admitted and is enrolled in the programme stated in this letter at EuroPolytech Academy for the academic period indicated below.';
+  $('corePT').value = 'Declara-se, para os devidos efeitos, que o estudante acima identificado foi admitido e se encontra inscrito no programa indicado nesta carta na EuroPolytech Academy, para o período académico abaixo referido.';
+  $('remarksEN').value = 'This enrolment is subject to completion of all administrative and academic formalities required by the institution. Admission or provisional enrolment does not by itself confer any immigration status, residence right, or employment right. Any official progression, registration with the awarding body, or final certification remains subject to the institution’s and awarding body’s rules.';
+  $('remarksPT').value = 'A presente inscrição está sujeita à conclusão de todas as formalidades administrativas e académicas exigidas pela instituição. A admissão ou inscrição provisória, por si só, não confere qualquer estatuto migratório, direito de residência ou direito ao trabalho. Qualquer progressão oficial, registo junto da entidade certificadora ou certificação final permanece sujeita às regras da instituição e da entidade certificadora.';
+  $('calendarEN').value = 'The programme is delivered within the dates stated in this letter. The academic schedule may include lectures, tutorials, workshops, guided study, independent learning, assessments, and institutional breaks, as applicable.';
+  $('calendarPT').value = 'O programa decorre dentro das datas indicadas nesta carta. O calendário académico pode incluir aulas, tutorias, workshops, estudo orientado, aprendizagem autónoma, avaliações e interrupções letivas institucionais, quando aplicável.';
+  $('ref').dataset.manual = '0';
+  autoReference();
+  calcDuration();
+  $('previewWrap').style.display = 'none';
+  $('letter-output').innerHTML = '';
+  showStatus('ok', 'Form cleared and reset to default institutional values.');
+}
+</script>
+</body>
+</html>
